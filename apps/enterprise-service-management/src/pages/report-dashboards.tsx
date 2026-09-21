@@ -1,0 +1,47 @@
+import { useMemo, useState } from 'react';
+import { LayoutDashboard, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { ReportVisualization } from '@/components/report-visualization';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useWorkspaceContext } from '@/contexts/workspace-context';
+import { InMemoryDataBanner } from '@/generated/components/in-memory-data-banner';
+import { HAS_IN_MEMORY_TABLES } from '@/generated/hooks';
+import { useCreateDashboardDefinition, useDashboardDefinitionList } from '@/generated/hooks/use-dashboard-definition';
+import { useCreateDashboardWidget, useDashboardWidgetList } from '@/generated/hooks/use-dashboard-widget';
+import { useFieldDefinitionList } from '@/generated/hooks/use-field-definition';
+import { useFormVersionList } from '@/generated/hooks/use-form-version';
+import { useRequestFieldValueList } from '@/generated/hooks/use-request-field-value';
+import { useRequestList } from '@/generated/hooks/use-request';
+import { useSavedReportConfigurationList } from '@/generated/hooks/use-saved-report-configuration';
+import { useSavedReportDefinitionList } from '@/generated/hooks/use-saved-report-definition';
+import type { FieldDefinition } from '@/generated/models/field-definition-model';
+import type { Request } from '@/generated/models/request-model';
+import { executeSavedReport } from '@/lib/report-execution-service';
+
+export default function ReportDashboardsPage() {
+  const { activeWorkspace, currentPerson, requestReadFilter, can } = useWorkspaceContext();
+  const [name, setName] = useState('Operations overview');
+  const [sharing, setSharing] = useState<'Private' | 'Workspace' | 'Service'>('Workspace');
+  const [selectedDashboardId, setSelectedDashboardId] = useState('none');
+  const [selectedReportId, setSelectedReportId] = useState('none');
+  const { data: dashboards = [] } = useDashboardDefinitionList();
+  const { data: widgets = [] } = useDashboardWidgetList();
+  const { data: reports = [] } = useSavedReportDefinitionList();
+  const { data: configurations = [] } = useSavedReportConfigurationList();
+  const { data: requests = [] } = useRequestList({ filter: requestReadFilter });
+  const { data: answers = [] } = useRequestFieldValueList();
+  const { data: fields = [] } = useFieldDefinitionList();
+  const { data: versions = [] } = useFormVersionList();
+  const createDashboard = useCreateDashboardDefinition();
+  const createWidget = useCreateDashboardWidget();
+  const scopedDashboards = dashboards.filter((item) => item.workspace.id === activeWorkspace?.id && !item.isDeleted && item.statusKey === 'Active');
+  const scopedReports = reports.filter((item) => item.workspace.id === activeWorkspace?.id && !item.isDeleted && item.statusKey === 'Active');
+  const context = useMemo(() => ({ workspaceId: activeWorkspace?.id ?? '', requests, answers, fields, versions, canReadRequest: (request: Request) => can('request.read', { workspaceId: request.workspace.id, requesterId: request.requester.id, requestedForId: request.requestedFor.id, assigneeId: request.assignee.id, assignmentGroupCode: request.assignmentGroupCode, serviceCode: request.serviceCode }), canReadField: (field: FieldDefinition) => !field.sensitive }), [activeWorkspace?.id, answers, can, fields, requests, versions]);
+  const create = async () => { if (!activeWorkspace || !currentPerson || !name.trim() || !can('report.dashboard.manage')) { toast.error('Dashboard management permission is required.'); return; } try { const dashboard = await createDashboard.mutateAsync({ name1: name.trim(), workspace: { id: activeWorkspace.id, workspaceName: activeWorkspace.workspaceName }, ownerPerson: { id: currentPerson.id, displayName: currentPerson.displayName }, sharingScopeKey: sharing, layoutJSON: JSON.stringify({ columns: 12 }), statusKey: 'Active', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false }); setSelectedDashboardId(dashboard.id); toast.success('Dashboard created.'); } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Dashboard creation failed.'); } };
+  const addWidget = async () => { const dashboard = scopedDashboards.find((item) => item.id === selectedDashboardId); const report = scopedReports.find((item) => item.id === selectedReportId); if (!dashboard || !report || !can('report.dashboard.manage')) { toast.error('Select a dashboard and saved report.'); return; } await createWidget.mutateAsync({ title: report.name1, dashboardDefinition: { id: dashboard.id, name1: dashboard.name1 }, savedReportDefinition: { id: report.id, name1: report.name1 }, sortOrder: widgets.filter((item) => item.dashboardDefinition.id === dashboard.id).length + 1, widthKey: 'Half', createdAt: new Date().toISOString(), isDeleted: false }); toast.success('Report widget added.'); };
+  return <main className="flex-1 p-4 md:p-6"><div className="mx-auto max-w-7xl space-y-5"><InMemoryDataBanner show={HAS_IN_MEMORY_TABLES} message="Dashboard widgets execute saved definitions against current authorized in-memory records." className="border-border bg-secondary text-secondary-foreground" /><header className="border-b border-border pb-5"><p className="text-sm font-medium">{activeWorkspace?.workspaceName}</p><h1 className="text-2xl font-semibold">Reporting dashboards</h1><p className="text-sm text-muted-foreground">Each widget uses the same report execution service as builder preview.</p></header><div className="grid gap-5 lg:grid-cols-2"><Card><CardHeader><CardTitle className="text-base">New dashboard</CardTitle><CardDescription>Dashboard visibility never expands report or request access.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-3"><div className="space-y-2 sm:col-span-2"><Label htmlFor="dashboard-name">Name</Label><Input id="dashboard-name" value={name} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setName(event.target.value)} /></div><div className="space-y-2"><Label>Sharing</Label><Select value={sharing} onValueChange={(value: 'Private' | 'Workspace' | 'Service') => setSharing(value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['Private', 'Workspace', 'Service'].map((value: string) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div><Button className="sm:col-span-3" onClick={() => void create()}><Plus className="size-4" />Create dashboard</Button></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Add saved report</CardTitle><CardDescription>Widgets execute linked definitions dynamically.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><Select value={selectedDashboardId} onValueChange={setSelectedDashboardId}><SelectTrigger><SelectValue placeholder="Dashboard" /></SelectTrigger><SelectContent><SelectItem value="none">Select dashboard</SelectItem>{scopedDashboards.map((item) => <SelectItem key={item.id} value={item.id}>{item.name1}</SelectItem>)}</SelectContent></Select><Select value={selectedReportId} onValueChange={setSelectedReportId}><SelectTrigger><SelectValue placeholder="Saved report" /></SelectTrigger><SelectContent><SelectItem value="none">Select report</SelectItem>{scopedReports.map((item) => <SelectItem key={item.id} value={item.id}>{item.name1}</SelectItem>)}</SelectContent></Select><Button variant="outline" className="sm:col-span-2" onClick={() => void addWidget()}><Plus className="size-4" />Add widget</Button></CardContent></Card></div>{scopedDashboards.map((dashboard) => { const dashboardWidgets = widgets.filter((widget) => widget.dashboardDefinition.id === dashboard.id && !widget.isDeleted).sort((a, b) => a.sortOrder - b.sortOrder); return <section key={dashboard.id} className="space-y-3"><h2 className="flex items-center gap-2 text-lg font-semibold"><LayoutDashboard className="size-5" />{dashboard.name1}</h2><div className="grid gap-4 lg:grid-cols-2">{dashboardWidgets.length ? dashboardWidgets.map((widget) => { const report = scopedReports.find((item) => item.id === widget.savedReportDefinition.id); const configuration = configurations.find((item) => item.savedReportDefinition.id === widget.savedReportDefinition.id); const result = report && configuration ? executeSavedReport(report, configuration, context) : { status: 'invalid' as const, message: 'The linked report configuration is missing.', visualization: 'Table' as const, rows: [], totalRows: 0, page: 1, pageSize: 20, summaryValue: 0, authorizedRequestCount: 0 }; return <Card key={widget.id} className={widget.widthKey === 'Full' ? 'lg:col-span-2' : undefined}><CardHeader><CardTitle className="text-base">{widget.title}</CardTitle></CardHeader><CardContent><ReportVisualization result={result} title={widget.title} /></CardContent></Card>; }) : <Card className="lg:col-span-2"><CardContent className="py-10 text-center text-sm text-muted-foreground">No report widgets have been added.</CardContent></Card>}</div></section>; })}</div></main>;
+}

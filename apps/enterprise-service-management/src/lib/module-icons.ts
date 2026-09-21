@@ -1,0 +1,51 @@
+import {
+  BadgeCheck,
+  BookOpen,
+  Building2,
+  CalendarCheck,
+  CalendarDays,
+  ChartColumn,
+  CircleAlert,
+  FileSignature,
+  ClipboardCheck,
+  GitPullRequest,
+  Handshake,
+  House,
+  Inbox,
+  Landmark,
+  Library,
+  Megaphone,
+  Package,
+  Plane,
+  Settings,
+  Siren,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
+
+const moduleIcons: Record<string, LucideIcon> = {
+  'badge-check': BadgeCheck,
+  'book-open': BookOpen,
+  'calendar-check': CalendarCheck,
+  'calendar-days': CalendarDays,
+  'chart-column': ChartColumn,
+  'circle-alert': CircleAlert,
+  'file-signature': FileSignature,
+  'clipboard-check': ClipboardCheck,
+  'git-pull-request': GitPullRequest,
+  handshake: Handshake,
+  house: House,
+  inbox: Inbox,
+  landmark: Landmark,
+  library: Library,
+  megaphone: Megaphone,
+  package: Package,
+  plane: Plane,
+  settings: Settings,
+  siren: Siren,
+  wrench: Wrench,
+};
+
+export function getModuleIcon(icon: string): LucideIcon {
+  return moduleIcons[icon] ?? Building2;
+}

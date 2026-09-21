@@ -1,0 +1,18 @@
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { ReportExecutionResult, ReportResultRow } from '@/lib/report-execution-service';
+
+const chartConfig = { value: { label: 'Result', color: 'var(--chart-1)' } } satisfies ChartConfig;
+const fills = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+
+export function ReportVisualization({ result, title = 'Report result', onDrillThrough }: { result: ReportExecutionResult; title?: string; onDrillThrough?: (requestIds: string[]) => void }) {
+  if (result.status !== 'ready') return <Empty className="min-h-52"><EmptyHeader><EmptyTitle>{result.status === 'invalid' ? 'Invalid report definition' : result.status === 'denied' ? 'Report unavailable' : 'No matching data'}</EmptyTitle><EmptyDescription>{result.message ?? 'No authorized records match this report.'}</EmptyDescription></EmptyHeader></Empty>;
+  if (result.visualization === 'Summary') return <Card className="border-t-4 border-t-primary"><CardHeader><CardDescription>{title}</CardDescription><CardTitle className="text-4xl tabular-nums">{result.summaryValue.toLocaleString()}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">Across {result.authorizedRequestCount} authorized requests.</p></CardContent></Card>;
+  if (result.visualization === 'Table') return <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>{result.dimension?.label ?? 'Group'}</TableHead><TableHead className="text-right">Result</TableHead></TableRow></TableHeader><TableBody>{result.rows.map((row: ReportResultRow) => <TableRow key={row.label} className={onDrillThrough ? 'cursor-pointer' : undefined} onClick={() => onDrillThrough?.(row.requestIds)}><TableCell>{row.label}</TableCell><TableCell className="text-right tabular-nums">{row.value.toLocaleString()}</TableCell></TableRow>)}</TableBody></Table></div>;
+  if (result.visualization === 'Line') return <ChartContainer config={chartConfig} className="h-80 w-full"><LineChart accessibilityLayer data={result.rows}><CartesianGrid vertical={false} /><XAxis dataKey="label" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><ChartTooltip content={<ChartTooltipContent />} /><Line dataKey="value" stroke="var(--chart-1)" strokeWidth={2} dot /></LineChart></ChartContainer>;
+  if (result.visualization === 'Donut') return <ChartContainer config={chartConfig} className="h-80 w-full"><PieChart accessibilityLayer><ChartTooltip content={<ChartTooltipContent nameKey="label" />} /><Pie data={result.rows} dataKey="value" nameKey="label" innerRadius={65} outerRadius={110}>{result.rows.map((row: ReportResultRow, index: number) => <Cell key={row.label} fill={fills[index % fills.length]} />)}</Pie></PieChart></ChartContainer>;
+  return <ChartContainer config={chartConfig} className="h-80 w-full"><BarChart accessibilityLayer data={result.rows}><CartesianGrid vertical={false} /><XAxis dataKey="label" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><ChartTooltip content={<ChartTooltipContent />} /><Bar dataKey="value" fill="var(--chart-1)" radius={4} /></BarChart></ChartContainer>;
+}

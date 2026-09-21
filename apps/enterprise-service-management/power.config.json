@@ -1,0 +1,20 @@
+{
+  "appDisplayName": "Unified Enterprise Service Management",
+  "description": "A configurable multi-workspace Enterprise Service Management platform with shared requests, people, settings, navigation, and permissions.",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "Default",
+  "localAppUrl": "http://localhost:5173/",
+  "connectionReferences": {
+    "4b3cd525-0162-4fc6-8272-def2371e099d": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_a365mcpservers",
+      "displayName": "Microsoft MCP Servers",
+      "dataSources": [
+        "a365mcpservers"
+      ],
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {},
+  "version": "1.0"
+}
