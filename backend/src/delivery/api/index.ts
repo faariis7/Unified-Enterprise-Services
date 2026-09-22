@@ -7,9 +7,10 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { pino } from 'pino';
-import { PostgresDatabase } from '../adapters/database/PostgresDatabase.js';
-import { RequestRepository } from '../adapters/repositories/RequestRepository.js';
-import { CreateRequestUseCase } from '../application/use-cases/CreateRequestUseCase.js';
+import { PostgresDatabase } from '../../adapters/database/PostgresDatabase.js';
+import { PostgresRequestRepository as RequestRepository } from '../../adapters/repositories/PostgresRequestRepository.js';
+import { CreateRequestUseCase } from '../../application/use-cases/CreateRequestUseCase.js';
+import { InMemoryEventPublisher } from '../../domain/events/DomainEvent.js';
 
 const buildApp = async () => {
   const app = Fastify({
@@ -62,14 +63,22 @@ const buildApp = async () => {
   });
 
   // Initialize database and repositories
-  const db = new PostgresDatabase();
-  const requestRepository = new RequestRepository(db);
-  const createRequestUseCase = new CreateRequestUseCase(requestRepository);
+  const database = new PostgresDatabase({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'unified_esm',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+  });
+  const db = await database.connect();
+  const requestRepository = new RequestRepository(database);
+  const eventPublisher = new InMemoryEventPublisher();
+  const createRequestUseCase = new CreateRequestUseCase(requestRepository, eventPublisher);
 
   // Health check endpoint with service validation
-  app.get('/health', async (request, reply) => {
+  app.get('/health', async (_request, reply) => {
     const healthStatus = {
-      status: 'ok' as const,
+      status: 'ok' as 'ok' | 'degraded',
       timestamp: new Date().toISOString(),
       services: {
         database: 'unknown' as 'connected' | 'disconnected' | 'unknown',
@@ -80,11 +89,11 @@ const buildApp = async () => {
 
     // Check database
     try {
-      await db.query('SELECT 1');
+      await db.selectNoFrom(sql`1`.as('one')).execute();
       healthStatus.services.database = 'connected';
     } catch {
       healthStatus.services.database = 'disconnected';
-      healthStatus.status = 'degraded';
+      healthStatus.status = 'degraded' as const;
     }
 
     // Check Redis
@@ -99,7 +108,7 @@ const buildApp = async () => {
       healthStatus.services.redis = 'connected';
     } catch {
       healthStatus.services.redis = 'disconnected';
-      healthStatus.status = 'degraded';
+      healthStatus.status = 'degraded' as const;
     }
 
     // Check Storage (MinIO)
@@ -112,14 +121,14 @@ const buildApp = async () => {
       }
     } catch {
       healthStatus.services.storage = 'disconnected';
-      healthStatus.status = 'degraded';
+      healthStatus.status = 'degraded' as const;
     }
 
     return reply.send(healthStatus);
   });
 
   // Readiness probe - checks if app is ready to accept traffic
-  app.get('/health/ready', async (request, reply) => {
+  app.get('/health/ready', async (_request, reply) => {
     try {
       await db.query('SELECT 1');
       return reply.send({ status: 'ready', timestamp: new Date().toISOString() });
@@ -155,12 +164,12 @@ const buildApp = async () => {
     }
   });
 
-  app.get('/api/v1/requests', async (request, reply) => {
+  app.get('/api/v1/requests', async (_request, _reply) => {
     // TODO: Implement get requests list
     return { requests: [] };
   });
 
-  app.get('/api/v1/requests/:id', async (request, reply) => {
+  app.get('/api/v1/requests/:id', async (request, _reply) => {
     const { id } = request.params as { id: string };
     // TODO: Implement get request by ID
     return { request: { id } };

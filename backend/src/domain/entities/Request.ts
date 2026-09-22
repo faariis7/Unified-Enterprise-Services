@@ -123,7 +123,7 @@ export class Request {
     }
 
     const oldAssignee = this._assigneeId;
-    this._assigneeId = assignee;
+    this._assigneeId = assigneeId;
     this._updatedAt = new Date();
 
     this._domainEvents.push({

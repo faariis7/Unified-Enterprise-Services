@@ -89,14 +89,14 @@ export class CreateRequestUseCase {
     }
   }
 
-  private async generateRequestId(workspaceId: string, serviceId: string): Promise<string> {
+  private async generateRequestId(_workspaceId: string, serviceId: string): Promise<string> {
     // Get current year and month for the request ID format: SVC-YYYY-MM-NNN
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     
     // Get the count of requests for this service in this month to generate sequential number
-    // This is a simplified implementation - in production, you'd use atomic increments
+    // This is a simplified implementation - in production, we'd use atomic increments
     const prefix = serviceId.toUpperCase().slice(0, 3);
     const sequence = Math.floor(Math.random() * 900) + 100; // Temporary random sequence
     

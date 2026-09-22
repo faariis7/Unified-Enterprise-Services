@@ -158,9 +158,17 @@ export class PostgresRequestRepository implements IRequestRepository {
       query = query.where('status', 'in', statuses);
     }
     
-    // Apply sorting
+    // Apply sorting with type-safe column validation
     if (pagination.sortBy && pagination.sortOrder) {
-      query = query.orderBy(pagination.sortBy as string, pagination.sortOrder);
+      const allowedColumns = ['id', 'request_id', 'title', 'status', 'priority', 'created_at', 'updated_at'] as const;
+      type SortColumn = typeof allowedColumns[number];
+      
+      const column = pagination.sortBy as SortColumn;
+      if (allowedColumns.includes(column)) {
+        query = query.orderBy(column, pagination.sortOrder);
+      } else {
+        query = query.orderBy('created_at', 'desc');
+      }
     } else {
       query = query.orderBy('created_at', 'desc');
     }
@@ -235,9 +243,9 @@ export class PostgresRequestRepository implements IRequestRepository {
       .updateTable('requests')
       .set({ status: newStatus, updated_at: new Date() })
       .where('id', 'in', ids)
-      .execute();
+      .executeTakeFirstOrThrow();
 
-    return Number(result.numUpdatedRows);
+    return Number(result.numUpdatedRows ?? 0);
   }
 
   async bulkAssign(ids: string[], assigneeId: string): Promise<number> {
@@ -246,9 +254,9 @@ export class PostgresRequestRepository implements IRequestRepository {
       .updateTable('requests')
       .set({ assignee_id: assigneeId, updated_at: new Date() })
       .where('id', 'in', ids)
-      .execute();
+      .executeTakeFirstOrThrow();
 
-    return Number(result.numUpdatedRows);
+    return Number(result.numUpdatedRows ?? 0);
   }
 
   private mapToEntity(row: any): Request {

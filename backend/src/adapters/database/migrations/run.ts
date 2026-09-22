@@ -1,7 +1,6 @@
-import { Kysely } from 'kysely';
-import { CamelCasePlugin } from 'kysely';
-import { PostgresDialect } from './PostgresDatabase.js';
-import { Database } from '../types.js';
+import { Kysely, sql } from 'kysely';
+import { getDatabase } from '../PostgresDatabase.js';
+import type { Database } from '../types.js';
 
 /**
  * Migration runner for database schema management
@@ -21,15 +20,15 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('workspaces')
         .ifNotExists()
-        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(db.executeQuery('uuid_generate_v4()').then(r => r.rows[0].uuid_generate_v4)))
-        .addColumn('name', 'varchar(255)', (col) => col.notNull())
-        .addColumn('slug', 'varchar(100)', (col) => col.notNull().unique())
+        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`uuid_generate_v4()`))
+        .addColumn('name', 'varchar(255)', (col: any) => col.notNull())
+        .addColumn('slug', 'varchar(100)', (col: any) => col.notNull().unique())
         .addColumn('description', 'text')
         .addColumn('logo_url', 'varchar(500)')
-        .addColumn('settings', 'jsonb', (col) => col.defaultTo('{}'))
-        .addColumn('active', 'boolean', (col) => col.defaultTo(true))
-        .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
-        .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('settings', 'jsonb', (col: any) => col.defaultTo('{}'))
+        .addColumn('active', 'boolean', (col: any) => col.defaultTo(true))
+        .addColumn('created_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn('updated_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
     },
     down: async (db) => {
@@ -42,17 +41,20 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('users')
         .ifNotExists()
-        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(db.executeQuery('uuid_generate_v4()').then(r => r.rows[0].uuid_generate_v4)))
-        .addColumn('email', 'varchar(255)', (col) => col.notNull().unique())
-        .addColumn('name', 'varchar(255)', (col) => col.notNull())
+        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`uuid_generate_v4()`))
+        .addColumn('email', 'varchar(255)', (col: any) => col.notNull().unique())
+        .addColumn('name', 'varchar(255)', (col: any) => col.notNull())
         .addColumn('password_hash', 'varchar(255)')
-        .addColumn('entra_id', 'varchar(255)').unique()
+        .addColumn('entra_id', 'varchar(255)')
         .addColumn('avatar_url', 'varchar(500)')
-        .addColumn('active', 'boolean', (col) => col.defaultTo(true))
+        .addColumn('active', 'boolean', (col: any) => col.defaultTo(true))
         .addColumn('last_login_at', 'timestamptz')
-        .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
-        .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('created_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn('updated_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
+
+      // Add unique constraint on entra_id separately
+      await sql`ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS users_entra_id_key UNIQUE (entra_id)`.execute(db);
     },
     down: async (db) => {
       await db.schema.dropTable('users').ifExists().execute();
@@ -64,21 +66,21 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('requests')
         .ifNotExists()
-        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(db.executeQuery('uuid_generate_v4()').then(r => r.rows[0].uuid_generate_v4)))
-        .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('workspaces.id').onDelete('cascade'))
-        .addColumn('service_id', 'uuid', (col) => col.notNull())
-        .addColumn('request_id', 'varchar(50)', (col) => col.notNull())
-        .addColumn('title', 'varchar(500)', (col) => col.notNull())
-        .addColumn('description', 'text', (col) => col.notNull())
-        .addColumn('status', 'varchar(50)', (col) => col.notNull().defaultTo('SUBMITTED'))
-        .addColumn('priority', 'varchar(20)', (col) => col.notNull().defaultTo('MEDIUM'))
-        .addColumn('requester_id', 'uuid', (col) => col.notNull().references('users.id'))
-        .addColumn('assignee_id', 'uuid', (col) => col.references('users.id'))
+        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`uuid_generate_v4()`))
+        .addColumn('workspace_id', 'uuid', (col: any) => col.notNull().references('workspaces.id').onDelete('cascade'))
+        .addColumn('service_id', 'uuid', (col: any) => col.notNull())
+        .addColumn('request_id', 'varchar(50)', (col: any) => col.notNull())
+        .addColumn('title', 'varchar(500)', (col: any) => col.notNull())
+        .addColumn('description', 'text', (col: any) => col.notNull())
+        .addColumn('status', 'varchar(50)', (col: any) => col.notNull().defaultTo('SUBMITTED'))
+        .addColumn('priority', 'varchar(20)', (col: any) => col.notNull().defaultTo('MEDIUM'))
+        .addColumn('requester_id', 'uuid', (col: any) => col.notNull().references('users.id'))
+        .addColumn('assignee_id', 'uuid', (col: any) => col.references('users.id'))
         .addColumn('category_id', 'uuid')
-        .addColumn('form_values', 'jsonb', (col) => col.defaultTo('{}'))
+        .addColumn('form_values', 'jsonb', (col: any) => col.defaultTo('{}'))
         .addColumn('sla_due_date', 'timestamptz')
-        .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
-        .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('created_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn('updated_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .addColumn('completed_at', 'timestamptz')
         .execute();
 
@@ -100,15 +102,15 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('approvals')
         .ifNotExists()
-        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(db.executeQuery('uuid_generate_v4()').then(r => r.rows[0].uuid_generate_v4)))
-        .addColumn('request_id', 'uuid', (col) => col.notNull().references('requests.id').onDelete('cascade'))
-        .addColumn('approver_id', 'uuid', (col) => col.notNull().references('users.id'))
-        .addColumn('level', 'integer', (col) => col.notNull().defaultTo(1))
-        .addColumn('status', 'varchar(20)', (col) => col.notNull().defaultTo('PENDING'))
+        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`uuid_generate_v4()`))
+        .addColumn('request_id', 'uuid', (col: any) => col.notNull().references('requests.id').onDelete('cascade'))
+        .addColumn('approver_id', 'uuid', (col: any) => col.notNull().references('users.id'))
+        .addColumn('level', 'integer', (col: any) => col.notNull().defaultTo(1))
+        .addColumn('status', 'varchar(20)', (col: any) => col.notNull().defaultTo('PENDING'))
         .addColumn('comments', 'text')
         .addColumn('decided_at', 'timestamptz')
-        .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
-        .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('created_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn('updated_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
     },
     down: async (db) => {
@@ -121,16 +123,16 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('audit_logs')
         .ifNotExists()
-        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(db.executeQuery('uuid_generate_v4()').then(r => r.rows[0].uuid_generate_v4)))
-        .addColumn('entity_type', 'varchar(100)', (col) => col.notNull())
-        .addColumn('entity_id', 'uuid', (col) => col.notNull())
-        .addColumn('action', 'varchar(50)', (col) => col.notNull())
-        .addColumn('user_id', 'uuid', (col) => col.references('users.id'))
+        .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`uuid_generate_v4()`))
+        .addColumn('entity_type', 'varchar(100)', (col: any) => col.notNull())
+        .addColumn('entity_id', 'uuid', (col: any) => col.notNull())
+        .addColumn('action', 'varchar(50)', (col: any) => col.notNull())
+        .addColumn('user_id', 'uuid', (col: any) => col.references('users.id'))
         .addColumn('old_values', 'jsonb')
         .addColumn('new_values', 'jsonb')
-        .addColumn('ip_address', 'inet')
+        .addColumn('ip_address', 'text')
         .addColumn('user_agent', 'text')
-        .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('created_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
 
       await db.schema.createIndex('idx_audit_logs_entity').on('audit_logs').columns(['entity_type', 'entity_id']).ifNotExists().execute();
@@ -148,9 +150,9 @@ const migrations: Migration[] = [
       await db.schema
         .createTable('migrations')
         .ifNotExists()
-        .addColumn('id', 'serial', (col) => col.primaryKey())
-        .addColumn('name', 'varchar(255)', (col) => col.notNull().unique())
-        .addColumn('executed_at', 'timestamptz', (col) => col.defaultTo(db.executeQuery('CURRENT_TIMESTAMP')))
+        .addColumn('id', 'serial', (col: any) => col.primaryKey())
+        .addColumn('name', 'varchar(255)', (col: any) => col.notNull().unique())
+        .addColumn('executed_at', 'timestamptz', (col: any) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
     },
     down: async (db) => {
@@ -160,16 +162,14 @@ const migrations: Migration[] = [
 ];
 
 export async function runMigrations() {
-  const db = new Kysely<Database>({
-    dialect: new PostgresDialect(),
-    plugins: [new CamelCasePlugin()],
-  });
+  const database = getDatabase();
+  const db = await database.connect();
 
   try {
     console.log('🔄 Running database migrations...');
 
     // Ensure uuid-ossp extension exists
-    await db.executeQuery('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+    await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`.execute(db);
 
     for (const migration of migrations) {
       const exists = await db
@@ -181,21 +181,15 @@ export async function runMigrations() {
       if (!exists) {
         console.log(`⏳ Running migration: ${migration.name}`);
         
-        const transaction = db.transaction();
-        try {
+        await db.transaction().execute(async (transaction) => {
           await migration.up(transaction);
           await transaction
             .insertInto('migrations')
             .values({ name: migration.name })
             .execute();
-          await transaction.commit();
-          
-          console.log(`✅ Migration completed: ${migration.name}`);
-        } catch (error) {
-          await transaction.rollback();
-          console.error(`❌ Migration failed: ${migration.name}`, error);
-          throw error;
-        }
+        });
+        
+        console.log(`✅ Migration completed: ${migration.name}`);
       } else {
         console.log(`⏭️  Skipping migration (already run): ${migration.name}`);
       }
@@ -206,15 +200,13 @@ export async function runMigrations() {
     console.error('💥 Migration error:', error);
     throw error;
   } finally {
-    await db.destroy();
+    await database.disconnect();
   }
 }
 
 export async function rollbackLastMigration() {
-  const db = new Kysely<Database>({
-    dialect: new PostgresDialect(),
-    plugins: [new CamelCasePlugin()],
-  });
+  const database = getDatabase();
+  const db = await database.connect();
 
   try {
     const lastMigration = await db
@@ -237,22 +229,19 @@ export async function rollbackLastMigration() {
 
     console.log(`🔙 Rolling back migration: ${migration.name}`);
     
-    const transaction = db.transaction();
-    try {
+    await db.transaction().execute(async (transaction) => {
       await migration.down(transaction);
       await transaction
         .deleteFrom('migrations')
         .where('name', '=', migration.name)
         .execute();
-      await transaction.commit();
-      
-      console.log(`✅ Rollback completed: ${migration.name}`);
-    } catch (error) {
-      await transaction.rollback();
-      console.error(`❌ Rollback failed: ${migration.name}`, error);
-      throw error;
-    }
+    });
+    
+    console.log(`✅ Rollback completed: ${migration.name}`);
+  } catch (error) {
+    console.error('❌ Rollback failed:', error);
+    throw error;
   } finally {
-    await db.destroy();
+    await database.disconnect();
   }
 }

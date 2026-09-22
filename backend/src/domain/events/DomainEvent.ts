@@ -15,7 +15,7 @@ export interface DomainEvent {
  */
 export interface DomainEventPublisher {
   publish(event: DomainEvent): Promise<void>;
-  publishAll(events: DomainEvent[]): Promise<void>;
+  publishAll(events: readonly DomainEvent[]): Promise<void>;
 }
 
 /**
@@ -35,7 +35,7 @@ export class InMemoryEventPublisher implements DomainEventPublisher {
     await Promise.all(handlers.map(handler => handler(event)));
   }
 
-  async publishAll(events: DomainEvent[]): Promise<void> {
+  async publishAll(events: readonly DomainEvent[]): Promise<void> {
     await Promise.all(events.map(event => this.publish(event)));
   }
 }

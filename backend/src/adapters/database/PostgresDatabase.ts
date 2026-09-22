@@ -1,6 +1,8 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect as KyselyPostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import type { Database } from './types.js';
+
+export { KyselyPostgresDialect as PostgresDialect };
 
 export interface DatabaseConfig {
   host: string;
@@ -34,11 +36,11 @@ export class PostgresDatabase {
     });
 
     this.db = new Kysely<Database>({
-      dialect: new PostgresDialect({ pool: this.pool }),
+      dialect: new KyselyPostgresDialect({ pool: this.pool }),
     });
 
     // Test connection
-    await this.db.executeQuery('SELECT 1');
+    await this.db.selectNoFrom(sql`1`.as('one')).execute();
 
     return this.db;
   }

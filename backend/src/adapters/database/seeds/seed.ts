@@ -1,7 +1,4 @@
-import { Kysely } from 'kysely';
-import { CamelCasePlugin } from 'kysely';
-import { PostgresDialect } from '../database/PostgresDatabase.js';
-import { Database } from '../database/types.js';
+import { getDatabase } from '../PostgresDatabase.js';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -10,10 +7,8 @@ import bcrypt from 'bcryptjs';
  */
 
 export async function seedDatabase() {
-  const db = new Kysely<Database>({
-    dialect: new PostgresDialect(),
-    plugins: [new CamelCasePlugin()],
-  });
+  const database = getDatabase();
+  const db = await database.connect();
 
   try {
     console.log('🌱 Seeding database...');
@@ -124,6 +119,6 @@ export async function seedDatabase() {
     console.error('💥 Seeding error:', error);
     throw error;
   } finally {
-    await db.destroy();
+    await database.disconnect();
   }
 }

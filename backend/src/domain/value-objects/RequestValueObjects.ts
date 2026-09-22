@@ -48,7 +48,7 @@ export const STATUS_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   [RequestStatus.DRAFT]: [RequestStatus.SUBMITTED, RequestStatus.CANCELLED],
   [RequestStatus.SUBMITTED]: [RequestStatus.IN_PROGRESS, RequestStatus.PENDING_APPROVAL, RequestStatus.REJECTED, RequestStatus.CANCELLED],
   [RequestStatus.IN_PROGRESS]: [RequestStatus.PENDING_APPROVAL, RequestStatus.PENDING_INFO, RequestStatus.ON_HOLD, RequestStatus.RESOLVED, RequestStatus.CANCELLED],
-  [RequestStatus.PENDING_APPROVAL]: [RequestStatus.IN_PROGRESS, RequestStatus.APPROVED, RequestStatus.REJECTED],
+  [RequestStatus.PENDING_APPROVAL]: [RequestStatus.IN_PROGRESS, RequestStatus.PENDING_INFO, RequestStatus.ON_HOLD, RequestStatus.REJECTED],
   [RequestStatus.PENDING_INFO]: [RequestStatus.IN_PROGRESS, RequestStatus.CANCELLED],
   [RequestStatus.ON_HOLD]: [RequestStatus.IN_PROGRESS, RequestStatus.CANCELLED],
   [RequestStatus.RESOLVED]: [RequestStatus.COMPLETED, RequestStatus.IN_PROGRESS],
