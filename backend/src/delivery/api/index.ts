@@ -8,7 +8,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { pino } from 'pino';
 import { PostgresDatabase } from '../adapters/database/PostgresDatabase.js';
-import { RequestRepository } from '../adapters/repositories/RequestRepository.js';
+import { PostgresRequestRepository as RequestRepository } from '../adapters/repositories/PostgresRequestRepository.js';
 import { CreateRequestUseCase } from '../application/use-cases/CreateRequestUseCase.js';
 
 const buildApp = async () => {

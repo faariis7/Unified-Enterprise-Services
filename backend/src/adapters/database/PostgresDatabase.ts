@@ -1,6 +1,8 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect as KyselyPostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import type { Database } from './types.js';
+
+export { KyselyPostgresDialect as PostgresDialect };
 
 export interface DatabaseConfig {
   host: string;
