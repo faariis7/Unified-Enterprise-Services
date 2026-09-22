@@ -166,7 +166,7 @@ export async function runMigrations() {
   const db = await database.connect();
 
   try {
-    console.log('🔄 Running database migrations...');
+    console.log('ðŸ”„ Running database migrations...');
 
     // Ensure uuid-ossp extension exists
     await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`.execute(db);
@@ -179,7 +179,7 @@ export async function runMigrations() {
         .executeTakeFirst();
 
       if (!exists) {
-        console.log(`⏳ Running migration: ${migration.name}`);
+        console.log(`â³ Running migration: ${migration.name}`);
         
         await db.transaction().execute(async (transaction) => {
           await migration.up(transaction);
@@ -191,13 +191,13 @@ export async function runMigrations() {
         
         console.log(`✅ Migration completed: ${migration.name}`);
       } else {
-        console.log(`⏭️  Skipping migration (already run): ${migration.name}`);
+        console.log(`â­ï¸  Skipping migration (already run): ${migration.name}`);
       }
     }
 
-    console.log('🎉 All migrations completed successfully!');
+    console.log('ðŸŽ‰ All migrations completed successfully!');
   } catch (error) {
-    console.error('💥 Migration error:', error);
+    console.error('ðŸ’¥ Migration error:', error);
     throw error;
   } finally {
     await database.disconnect();
@@ -227,7 +227,7 @@ export async function rollbackLastMigration() {
       return;
     }
 
-    console.log(`🔙 Rolling back migration: ${migration.name}`);
+    console.log(`ðŸ”™ Rolling back migration: ${migration.name}`);
     
     await db.transaction().execute(async (transaction) => {
       await migration.down(transaction);
@@ -245,3 +245,4 @@ export async function rollbackLastMigration() {
     await database.disconnect();
   }
 }
+
