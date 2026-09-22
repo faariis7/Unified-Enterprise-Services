@@ -27,6 +27,7 @@ import AutomationEnginePage from '@/pages/automation-engine';
 import WorkflowBuilderPage from '@/pages/workflow-builder';
 import RequesterPortalPage from '@/pages/requester-portal';
 import RequesterRequestDetailPage from '@/pages/requester-request-detail';
+import RequestQueuePage from '@/pages/request-queue';
 
 import ReportingPage from '@/pages/reporting';
 import ReportBuilderPage from '@/pages/report-builder';
@@ -126,6 +127,7 @@ function App() {
                       <Route path="knowledge" element={<KnowledgeCenterPage />} />
                       <Route path="portal/requests/:requestId" element={<RequesterRequestDetailPage />} />
                       <Route path="approvals" element={<ApprovalQueuePage />} />
+                      <Route path="technician" element={<RequestQueuePage />} />
                       <Route path="requests/:requestId" element={<RequesterRequestDetailPage mode="technician" />} />
                       <Route path="catalog/:itemCode" element={<ServiceCatalogPage />} />
 

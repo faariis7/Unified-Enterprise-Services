@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Building2, CheckCircle2, CircleUserRound, ClipboardList, Globe2, Home, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, BookOpen, Building2, CheckCircle2, CircleUserRound, ClipboardList, Globe2, Home, LayoutGrid, ShieldCheck, Wrench } from 'lucide-react';
 import { WorkspaceSelector } from '@/components/workspace-selector';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from '@/components/ui/sidebar';
 import { useAdministrationAccess } from '@/contexts/administration-access-context';
@@ -9,10 +9,11 @@ import { getModuleIcon } from '@/lib/module-icons';
 const requesterLinks = [
   { label: 'Home', to: '/', icon: Home },
   { label: 'Services', to: '/catalog', icon: LayoutGrid },
-  { label: 'My Requests', suffix: 'my-requests', icon: ClipboardList },
-  { label: 'My Approvals', suffix: 'my-approvals', icon: CheckCircle2 },
-  { label: 'Knowledge', suffix: 'knowledge', icon: BookOpen },
+  { label: 'My Requests', to: '/w/it-services/requests', icon: ClipboardList },
+  { label: 'My Approvals', to: '/w/it-services/approvals', icon: CheckCircle2 },
+  { label: 'Knowledge', to: '/w/it-services/knowledge', icon: BookOpen },
   { label: 'Profile', suffix: 'profile', icon: CircleUserRound },
+  { label: 'Technician Portal', to: '/technician', icon: Wrench },
 ] as const;
 
 export function AppShell() {
@@ -41,7 +42,7 @@ export function AppShell() {
             </div>
           </div>
           <nav className="flex gap-2 overflow-x-auto border-t border-border px-4 py-2 md:hidden" aria-label="Mobile requester navigation">
-            {requesterLinks.slice(0, 5).map((item) => { const Icon = item.icon; const to = 'to' in item ? item.to : `${workspaceBase}/portal/${item.suffix}`; return <NavLink key={item.label} to={to} end={item.label === 'Home'} className={({ isActive }: { isActive: boolean }) => `flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${isActive ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground'}`}><Icon className="size-4" />{item.label}</NavLink>; })}
+            {requesterLinks.slice(0, 6).map((item) => { const Icon = item.icon; const to = 'to' in item ? item.to : `${workspaceBase}/portal/${item.suffix}`; return <NavLink key={item.label} to={to} end={item.label === 'Home'} className={({ isActive }: { isActive: boolean }) => `flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${isActive ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground'}`}><Icon className="size-4" />{item.label}</NavLink>; })}
           </nav>
         </header>
         <Outlet />

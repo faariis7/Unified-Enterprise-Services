@@ -1,0 +1,67 @@
+import { RequestStatus, RequestPriority } from '../value-objects/RequestValueObjects.js';
+import { DomainEvent } from '../events/DomainEvent.js';
+export interface RequestData {
+    id: string;
+    workspaceId: string;
+    serviceId: string;
+    requestId: string;
+    title: string;
+    description: string;
+    status: RequestStatus;
+    priority: RequestPriority;
+    requesterId: string;
+    assigneeId?: string;
+    categoryId?: string;
+    formValues: Record<string, unknown>;
+    slaDueDate?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    completedAt?: Date;
+}
+export declare class Request {
+    private readonly _id;
+    private readonly _workspaceId;
+    private readonly _serviceId;
+    private readonly _requestId;
+    private _title;
+    private _description;
+    private _status;
+    private _priority;
+    private readonly _requesterId;
+    private _assigneeId?;
+    private _categoryId?;
+    private readonly _formValues;
+    private _slaDueDate?;
+    private readonly _createdAt;
+    private _updatedAt;
+    private _completedAt?;
+    private readonly _domainEvents;
+    constructor(data: RequestData);
+    get id(): string;
+    get workspaceId(): string;
+    get serviceId(): string;
+    get requestId(): string;
+    get title(): string;
+    get description(): string;
+    get status(): RequestStatus;
+    get priority(): RequestPriority;
+    get requesterId(): string;
+    get assigneeId(): string | undefined;
+    get categoryId(): string | undefined;
+    get formValues(): Record<string, unknown>;
+    get slaDueDate(): Date | undefined;
+    get createdAt(): Date;
+    get updatedAt(): Date;
+    get completedAt(): Date | undefined;
+    get domainEvents(): ReadonlyArray<DomainEvent>;
+    updateTitle(title: string): void;
+    updateDescription(description: string): void;
+    changeStatus(newStatus: RequestStatus, reason?: string): void;
+    assignTo(assigneeId: string): void;
+    unassign(): void;
+    updateFormValues(values: Record<string, unknown>): void;
+    setSlaDueDate(dueDate: Date): void;
+    clearDomainEvents(): void;
+    hasActiveSlaBreach(): boolean;
+}
+//# sourceMappingURL=Request.d.ts.map
