@@ -1,708 +1,273 @@
-# Quick Start Implementation Guide
+# 🚀 Quick Start Guide - Unified ESM
 
-## How to Start Building This System
+## Prerequisites
 
-This guide provides actionable steps to begin implementing the UESM platform following the development plan.
+Before you begin, ensure you have the following installed on your computer:
 
----
+### Required Software
+1. **Node.js** (v20 or higher)
+   - Download from: https://nodejs.org/
+   - Verify: `node --version` (should show v20.x.x or higher)
 
-## Phase 0: Preparation (Day 1)
+2. **Docker Desktop** (for database and services)
+   - Download from: https://www.docker.com/products/docker-desktop/
+   - Verify: `docker --version` and `docker-compose --version`
 
-### 1. Verify Current State
+3. **Git** (to clone the repository)
+   - Download from: https://git-scm.com/
+   - Verify: `git --version`
 
-```bash
-# Check existing frontend setup
-cd /workspace
-bun install
-bun run dev
+## Step-by-Step Setup
 
-# Verify the application runs
-# Open http://localhost:5173 and confirm Services Marketplace loads
-```
-
-### 2. Review Existing Code Structure
-
-Key files to understand:
-- `/workspace/src/lib/authorization.ts` - Current authorization logic
-- `/workspace/src/lib/request-orchestration.ts` - Request workflow logic
-- `/workspace/src/lib/approval-engine.ts` - Approval processing
-- `/workspace/src/lib/lifecycle-engine.ts` - Lifecycle state machine
-- `/workspace/src/lib/workflow-application-service.ts` - Workflow automation
-- `/workspace/data-model/full-data-model.json` - Complete data model
-- `/workspace/docs/overview.md` - Functional overview
-- `/workspace/docs/production-architecture-roadmap.md` - Architecture direction
-
-### 3. Set Up Development Tools
+### 1. Clone and Navigate to Project
 
 ```bash
-# Install global development tools
-npm install -g prisma
-npm install -g @nestjs/cli  # Or choose your backend framework
+# Clone the repository (if you haven't already)
+git clone <your-repo-url>
+cd unified-esm
 
-# Install Docker for local infrastructure
-# Download from https://docker.com
+# Or if you downloaded as ZIP, extract it and open terminal in the project folder
+cd /path/to/unified-esm
 ```
 
----
-
-## Phase 1: Backend Foundation (Week 1-2)
-
-### Step 1: Initialize Backend Project
-
-**Option A: Node.js with Fastify (Recommended)**
+### 2. Start Infrastructure Services (Database, Redis, etc.)
 
 ```bash
-cd /workspace
-mkdir -p backend
-cd backend
+# Navigate to infrastructure folder
+cd infrastructure/docker
 
-# Initialize project
-bun init -y
+# Start all services (PostgreSQL, Redis, MinIO, MailHog, ClamAV)
+docker-compose -f docker-compose.dev.yml up -d
 
-# Install core dependencies
-bun add fastify @fastify/cors @fastify/helmet @fastify/jwt
-bun add zod date-fns uuid
-bun add -d typescript @types/node @types/uuid tsx vitest
-
-# Create tsconfig.json
-cat > tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2022"],
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
-EOF
-
-# Create initial folder structure
-mkdir -p src/{domain,application,adapters,delivery,composition-root}
-mkdir -p src/domain/{entities,value-objects,events,errors,policies}
-mkdir -p src/application/{commands,queries,use-cases,ports,dto}
-mkdir -p src/adapters/{persistence,identity,storage,messaging}
-mkdir -p src/delivery/{api,worker,middleware}
-mkdir -p tests/{unit,integration,e2e}
+# Verify services are running
+docker-compose -f docker-compose.dev.yml ps
 ```
 
-**Option B: .NET 8 with ASP.NET Core**
+**Expected Output:**
+- PostgreSQL running on port 5432
+- Redis running on port 6379
+- MinIO running on ports 9000 (API) and 9001 (Console)
+- MailHog running on ports 1025 (SMTP) and 8025 (Web UI)
+- ClamAV running on port 3310
+
+### 3. Setup Backend
 
 ```bash
-cd /workspace
-mkdir backend
-cd backend
+# Navigate to backend folder
+cd ../../backend
 
-# Create solution
-dotnet new sln -n UESM
-dotnet new webapi -n UESM.Api --use-controllers
-dotnet new classlib -n UESM.Domain
-dotnet new classlib -n UESM.Application
+# Install dependencies
+npm install
 
-# Add projects to solution
-dotnet sln add UESM.Api/UESM.Api.csproj
-dotnet sln add UESM.Domain/UESM.Domain.csproj
-dotnet sln add UESM.Application/UESM.Application.csproj
+# Copy environment configuration
+cp .env.example .env
 
-# Add references
-cd UESM.Api
-dotnet add reference ../UESM.Domain/UESM.Domain.csproj
-dotnet add reference ../UESM.Application/UESM.Application.csproj
+# The .env file is already configured for local development
+# You can edit it if you need to change ports or credentials
 ```
 
-### Step 2: Define Domain Entities
+### 4. Run Database Migrations
 
-Create `/workspace/backend/src/domain/entities/Request.ts`:
+```bash
+# Still in backend folder, run migrations
+npm run db:migrate
+```
 
-```typescript
-import { RequestId } from '../value-objects/RequestId';
-import { RequestNumber } from '../value-objects/RequestNumber';
-import { WorkspaceId } from '../value-objects/WorkspaceId';
-import { PersonId } from '../value-objects/PersonId';
+**Expected Output:**
+```
+🔄 Running database migrations...
+⏳ Running migration: 001_create-workspaces-table
+✅ Migration completed: 001_create-workspaces-table
+⏳ Running migration: 002_create-users-table
+✅ Migration completed: 002_create-users-table
+... (more migrations)
+🎉 All migrations completed successfully!
+```
 
-export type RequestStatus = 'Draft' | 'Submitted' | 'InProgress' | 'Resolved' | 'Closed';
-export type LifecycleState = string; // Configurable per service
+### 5. Seed Test Data
 
-export interface RequestData {
-  requestId: RequestId;
-  workspaceId: WorkspaceId;
-  serviceId: string;
-  catalogItemId?: string;
-  requestNumber: RequestNumber;
-  requesterId: PersonId;
-  requestedForId?: PersonId;
-  status: RequestStatus;
-  lifecycleState: LifecycleState;
-  title: string;
-  description?: string;
-  submittedAt?: Date;
-  resolvedAt?: Date;
-  closedAt?: Date;
-  slaDueAt?: Date;
-  slaBreached: boolean;
-  rowVersion: number;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: PersonId;
-  updatedBy: PersonId;
-}
+```bash
+# Create test users and workspaces
+npm run db:seed
+```
 
-export class Request {
-  constructor(private data: RequestData) {}
+**Expected Output:**
+```
+🌱 Seeding database...
+✅ Created workspace: IT Services
+✅ Created workspace: HR Services
+... (more workspaces)
+✅ Created user: System Administrator (ADMIN)
+✅ Created user: John Doe (END_USER)
+... (more users)
 
-  get id(): RequestId { return this.data.requestId; }
-  get workspaceId(): WorkspaceId { return this.data.workspaceId; }
-  get requestNumber(): RequestNumber { return this.data.requestNumber; }
-  get status(): RequestStatus { return this.data.status; }
-  get lifecycleState(): LifecycleState { return this.data.lifecycleState; }
-  get rowVersion(): number { return this.data.rowVersion; }
+📋 Test Credentials:
+   Email: admin@unified-esm.local
+   Password: Password123!
+```
+
+### 6. Start Backend Server
+
+```bash
+# Start development server with hot-reload
+npm run dev
+```
+
+**Expected Output:**
+```
+🚀 Server running at http://0.0.0.0:3000
+📚 API Documentation at http://0.0.0.0:3000/docs
+💾 Database: unified_esm@localhost:5432
+```
+
+### 7. Start Frontend (React App)
+
+```bash
+# Open a new terminal window
+# Navigate to project root
+cd /path/to/unified-esm
+
+# Install frontend dependencies (if not already done)
+npm install
+
+# Start frontend development server
+npm run dev
+```
+
+**Expected Output:**
+```
+  VITE v7.x.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+```
+
+## Access the Application
+
+### Backend API
+- **API Server**: http://localhost:3000
+- **API Documentation (Swagger)**: http://localhost:3000/docs
+- **Health Check**: http://localhost:3000/health
+
+### Frontend Application
+- **Main App**: http://localhost:5173
+
+### Supporting Services
+- **MinIO Console** (File Storage): http://localhost:9001
+  - Username: `minioadmin`
+  - Password: `minioadmin`
   
-  isDraft(): boolean {
-    return this.data.status === 'Draft';
-  }
+- **MailHog** (Email Testing): http://localhost:8025
+  - View all emails sent by the application
 
-  canTransitionTo(newState: LifecycleState): boolean {
-    // Lifecycle transition rules will be evaluated here
-    return true;
-  }
+## Test Users (Hardcoded for Development)
 
-  submit(): void {
-    if (this.data.status !== 'Draft') {
-      throw new Error('Only draft requests can be submitted');
-    }
-    this.data.status = 'Submitted';
-    this.data.submittedAt = new Date();
-    this.data.updatedAt = new Date();
-  }
+All users use password: `Password123!`
 
-  // Additional domain methods...
-}
-```
+| Email | Role | Workspace |
+|-------|------|-----------|
+| admin@unified-esm.local | ADMIN | All |
+| john.doe@unified-esm.local | END_USER | IT Services |
+| jane.smith@unified-esm.local | MANAGER | IT Services |
+| bob.approver@unified-esm.local | APPROVER | IT Services |
+| alice.analyst@unified-esm.local | ANALYST | All |
+| service.provider@unified-esm.local | SERVICE_PROVIDER | IT Services |
 
-Create similar entities for: `Workspace`, `Service`, `Person`, `ApprovalDefinition`, `RequestApproval`
+## Common Commands
 
-### Step 3: Define Application Ports
-
-Create `/workspace/backend/src/application/ports/RequestRepository.ts`:
-
-```typescript
-import { Request } from '../../domain/entities/Request';
-import { RequestId } from '../../domain/value-objects/RequestId';
-import { AuthenticatedUser } from '../dto/AuthenticatedUser';
-
-export interface RequestQuery {
-  workspaceId?: string;
-  requesterId?: string;
-  status?: string;
-  lifecycleState?: string;
-  assignedToId?: string;
-  limit?: number;
-  offset?: number;
-  orderBy?: string;
-  orderDirection?: 'ASC' | 'DESC';
-}
-
-export interface RequestRepository {
-  findById(id: RequestId, actor: AuthenticatedUser): Promise<Request | null>;
-  findByQuery(query: RequestQuery, actor: AuthenticatedUser): Promise<Request[]>;
-  save(request: Request): Promise<void>;
-  delete(id: RequestId): Promise<void>;
-  countByQuery(query: RequestQuery): Promise<number>;
-}
-```
-
-Create additional ports: `UnitOfWork`, `IdentityProvider`, `ApprovalRepository`, etc.
-
-### Step 4: Implement In-Memory Adapters
-
-Create `/workspace/backend/src/adapters/persistence/in-memory/InMemoryRequestRepository.ts`:
-
-```typescript
-import { Request } from '../../../domain/entities/Request';
-import { RequestRepository, RequestQuery } from '../../../application/ports/RequestRepository';
-import { RequestId } from '../../../domain/value-objects/RequestId';
-import { AuthenticatedUser } from '../../../application/dto/AuthenticatedUser';
-
-export class InMemoryRequestRepository implements RequestRepository {
-  private store: Map<string, Request> = new Map();
-
-  async findById(id: RequestId, actor: AuthenticatedUser): Promise<Request | null> {
-    // Apply authorization check before returning
-    const request = this.store.get(id.toString());
-    if (!request) return null;
-    
-    // TODO: Apply row-level security based on actor permissions
-    return request;
-  }
-
-  async findByQuery(query: RequestQuery, actor: AuthenticatedUser): Promise<Request[]> {
-    let results = Array.from(this.store.values());
-
-    // Apply filters
-    if (query.workspaceId) {
-      results = results.filter(r => r.workspaceId.toString() === query.workspaceId);
-    }
-    if (query.status) {
-      results = results.filter(r => r.status === query.status);
-    }
-
-    // TODO: Apply authorization filtering
-    
-    // Apply pagination
-    const offset = query.offset || 0;
-    const limit = query.limit || 50;
-    return results.slice(offset, offset + limit);
-  }
-
-  async save(request: Request): Promise<void> {
-    this.store.set(request.id.toString(), request);
-  }
-
-  async delete(id: RequestId): Promise<void> {
-    this.store.delete(id.toString());
-  }
-
-  async countByQuery(query: RequestQuery): Promise<number> {
-    const results = await this.findByQuery(query, {} as AuthenticatedUser);
-    return results.length;
-  }
-}
-```
-
-### Step 5: Create First Use Case
-
-Create `/workspace/backend/src/application/use-cases/SubmitRequestUseCase.ts`:
-
-```typescript
-import { Request } from '../../domain/entities/Request';
-import { RequestRepository } from '../ports/RequestRepository';
-import { UnitOfWork } from '../ports/UnitOfWork';
-import { AuditWriter } from '../ports/AuditWriter';
-import { Clock } from '../ports/Clock';
-import { RequestNumberGenerator } from '../ports/RequestNumberGenerator';
-import { AuthenticatedUser } from '../dto/AuthenticatedUser';
-
-export interface SubmitRequestCommand {
-  workspaceId: string;
-  serviceId: string;
-  catalogItemId?: string;
-  title: string;
-  description?: string;
-  requestedForId?: string;
-  fieldValues: Array<{
-    fieldDefinitionId: string;
-    value: any;
-  }>;
-  idempotencyKey: string;
-}
-
-export class SubmitRequestUseCase {
-  constructor(
-    private readonly requestRepository: RequestRepository,
-    private readonly unitOfWork: UnitOfWork,
-    private readonly auditWriter: AuditWriter,
-    private readonly clock: Clock,
-    private readonly requestNumberGenerator: RequestNumberGenerator
-  ) {}
-
-  async execute(command: SubmitRequestCommand, actor: AuthenticatedUser): Promise<Request> {
-    // Check idempotency
-    // Validate input
-    // Generate request number
-    // Create request aggregate
-    // Save with transaction
-    // Write audit event
-    
-    const now = this.clock.now();
-    
-    await this.unitOfWork.beginTransaction();
-    
-    try {
-      // Generate request number
-      const year = now.getFullYear();
-      const requestNumber = await this.requestNumberGenerator.generate(
-        command.workspaceId,
-        year
-      );
-
-      // Create request entity
-      const request = Request.create({
-        workspaceId: command.workspaceId,
-        serviceId: command.serviceId,
-        catalogItemId: command.catalogItemId,
-        requestNumber,
-        requesterId: actor.personId,
-        requestedForId: command.requestedForId,
-        title: command.title,
-        description: command.description,
-        status: 'Submitted',
-        lifecycleState: 'Submitted',
-        submittedAt: now,
-        createdBy: actor.personId,
-        updatedBy: actor.personId
-      });
-
-      // Save request
-      await this.requestRepository.save(request);
-
-      // Write audit event
-      await this.auditWriter.write({
-        entityType: 'Request',
-        entityId: request.id.toString(),
-        action: 'Created',
-        actor: actor,
-        source: 'API',
-        createdAt: now
-      });
-
-      await this.unitOfWork.commit();
-      
-      return request;
-    } catch (error) {
-      await this.unitOfWork.rollback();
-      throw error;
-    }
-  }
-}
-```
-
-### Step 6: Set Up API Controller
-
-Create `/workspace/backend/src/delivery/api/controllers/RequestsController.ts`:
-
-```typescript
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { SubmitRequestUseCase, SubmitRequestCommand } from '../../../application/use-cases/SubmitRequestUseCase';
-import { AuthenticatedUser } from '../../../application/dto/AuthenticatedUser';
-
-interface CreateRequestBody {
-  catalogItemId?: string;
-  title: string;
-  description?: string;
-  requestedForId?: string;
-  fieldValues: Array<{
-    fieldDefinitionId: string;
-    value: any;
-  }>;
-}
-
-export class RequestsController {
-  constructor(
-    private readonly submitRequestUseCase: SubmitRequestUseCase
-  ) {}
-
-  async create(
-    request: FastifyRequest<{
-      Params: { workspaceCode: string };
-      Body: CreateRequestBody;
-    }>,
-    reply: FastifyReply
-  ) {
-    const actor = request.user as AuthenticatedUser;
-    
-    const command: SubmitRequestCommand = {
-      workspaceId: request.params.workspaceCode,
-      serviceId: 'TODO: Get from catalog item',
-      catalogItemId: request.body.catalogItemId,
-      title: request.body.title,
-      description: request.body.description,
-      requestedForId: request.body.requestedForId,
-      fieldValues: request.body.fieldValues,
-      idempotencyKey: request.headers['idempotency-key'] || crypto.randomUUID()
-    };
-
-    const result = await this.submitRequestUseCase.execute(command, actor);
-
-    return reply.code(201).send({
-      requestId: result.id.toString(),
-      requestNumber: result.requestNumber.toString(),
-      status: result.status,
-      createdAt: result.createdAt
-    });
-  }
-}
-```
-
-### Step 7: Wire Up Composition Root
-
-Create `/workspace/backend/src/composition-root/index.ts`:
-
-```typescript
-import { InMemoryRequestRepository } from '../adapters/persistence/in-memory/InMemoryRequestRepository';
-import { InMemoryUnitOfWork } from '../adapters/persistence/in-memory/InMemoryUnitOfWork';
-import { ConsoleAuditWriter } from '../adapters/messaging/ConsoleAuditWriter';
-import { SystemClock } from '../adapters/SystemClock';
-import { InMemoryRequestNumberGenerator } from '../adapters/persistence/in-memory/InMemoryRequestNumberGenerator';
-import { SubmitRequestUseCase } from '../application/use-cases/SubmitRequestUseCase';
-import { RequestsController } from '../delivery/api/controllers/RequestsController';
-
-// Infrastructure
-const unitOfWork = new InMemoryUnitOfWork();
-const clock = new SystemClock();
-const auditWriter = new ConsoleAuditWriter();
-const requestNumberGenerator = new InMemoryRequestNumberGenerator();
-
-// Repositories
-const requestRepository = new InMemoryRequestRepository();
-
-// Use Cases
-const submitRequestUseCase = new SubmitRequestUseCase(
-  requestRepository,
-  unitOfWork,
-  auditWriter,
-  clock,
-  requestNumberGenerator
-);
-
-// Controllers
-const requestsController = new RequestsController(submitRequestUseCase);
-
-export {
-  requestsController,
-  // Export other controllers
-};
-```
-
----
-
-## Phase 2: Database Integration (Week 3-4)
-
-### Step 1: Set Up PostgreSQL
-
+### Backend
 ```bash
-# Using Docker Compose
-cd /workspace
-cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: uesm_dev
-      POSTGRES_USER: uesm_user
-      POSTGRES_PASSWORD: uesm_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
-
-  minio:
-    image: minio/minio
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
-
-volumes:
-  postgres_data:
-  minio_data:
-EOF
-
-docker-compose up -d postgres minio
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run test         # Run tests
+npm run db:migrate   # Run database migrations
+npm run db:seed      # Seed test data
+npm run typecheck    # Type check TypeScript
+npm run lint         # Run linter
 ```
 
-### Step 2: Create Database Migrations
-
-Using Prisma:
-
+### Infrastructure
 ```bash
-cd /workspace/backend
-bun add prisma @prisma/client
-bun add -d @types/prisma
+# Stop all services
+docker-compose -f docker-compose.dev.yml down
 
-npx prisma init
+# Stop and remove all data (fresh start)
+docker-compose -f docker-compose.dev.yml down -v
 
-# Edit prisma/schema.prisma with your models
-# Then run:
-npx prisma migrate dev --name init
-npx prisma generate
+# View logs
+docker-compose -f docker-compose.dev.yml logs -f
+
+# Restart a specific service
+docker-compose -f docker-compose.dev.yml restart postgres
 ```
 
-### Step 3: Implement PostgreSQL Repositories
+## Troubleshooting
 
-Create `/workspace/backend/src/adapters/persistence/postgresql/PostgreSqlRequestRepository.ts`:
-
-```typescript
-import { PrismaClient } from '@prisma/client';
-import { Request } from '../../../domain/entities/Request';
-import { RequestRepository, RequestQuery } from '../../../application/ports/RequestRepository';
-import { RequestId } from '../../../domain/value-objects/RequestId';
-import { AuthenticatedUser } from '../../../application/dto/AuthenticatedUser';
-
-export class PostgreSqlRequestRepository implements RequestRepository {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  async findById(id: RequestId, actor: AuthenticatedUser): Promise<Request | null> {
-    const record = await this.prisma.request.findUnique({
-      where: { requestId: id.toString() },
-      include: {
-        fieldValues: true,
-        approvals: true
-      }
-    });
-
-    if (!record) return null;
-
-    // TODO: Apply authorization check
-    // TODO: Map database record to domain entity
-    return this.mapToEntity(record);
-  }
-
-  async findByQuery(query: RequestQuery, actor: AuthenticatedUser): Promise<Request[]> {
-    const where: any = {};
-
-    if (query.workspaceId) {
-      where.workspaceId = query.workspaceId;
-    }
-    if (query.status) {
-      where.status = query.status;
-    }
-
-    // Apply authorization filters
-    // ...
-
-    const records = await this.prisma.request.findMany({
-      where,
-      include: {
-        fieldValues: true
-      },
-      skip: query.offset || 0,
-      take: query.limit || 50,
-      orderBy: query.orderBy ? { [query.orderBy]: query.orderDirection || 'ASC' } : undefined
-    });
-
-    return records.map(r => this.mapToEntity(r));
-  }
-
-  async save(request: Request): Promise<void> {
-    // Convert domain entity to Prisma input
-    // Handle upsert logic
-    // ...
-  }
-
-  private mapToEntity(record: any): Request {
-    // Map database record to domain entity
-    // ...
-    return new Request({ /* mapped data */ });
-  }
-}
-```
-
----
-
-## Phase 3: Testing Strategy
-
-### Unit Tests Example
-
-Create `/workspace/backend/tests/unit/SubmitRequestUseCase.test.ts`:
-
-```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SubmitRequestUseCase } from '../../src/application/use-cases/SubmitRequestUseCase';
-import { MockRequestRepository } from '../mocks/MockRequestRepository';
-import { MockUnitOfWork } from '../mocks/MockUnitOfWork';
-import { MockAuditWriter } from '../mocks/MockAuditWriter';
-import { MockClock } from '../mocks/MockClock';
-import { MockRequestNumberGenerator } from '../mocks/MockRequestNumberGenerator';
-
-describe('SubmitRequestUseCase', () => {
-  let useCase: SubmitRequestUseCase;
-  let mockRepository: MockRequestRepository;
-  let mockUnitOfWork: MockUnitOfWork;
-  let mockClock: MockClock;
-  let mockNumberGenerator: MockRequestNumberGenerator;
-
-  beforeEach(() => {
-    mockRepository = new MockRequestRepository();
-    mockUnitOfWork = new MockUnitOfWork();
-    mockClock = new MockClock(new Date('2026-01-15T10:00:00Z'));
-    mockNumberGenerator = new MockRequestNumberGenerator('IT-2026-000001');
-    
-    useCase = new SubmitRequestUseCase(
-      mockRepository,
-      mockUnitOfWork,
-      mockAuditWriter,
-      mockClock,
-      mockNumberGenerator
-    );
-  });
-
-  it('should create request with correct number', async () => {
-    const command = {
-      workspaceId: 'IT',
-      serviceId: 'service-1',
-      title: 'Test Request',
-      fieldValues: [],
-      idempotencyKey: 'test-key'
-    };
-
-    const actor = { personId: 'user-1', email: 'test@example.com' };
-
-    const result = await useCase.execute(command, actor);
-
-    expect(result.requestNumber.toString()).toBe('IT-2026-000001');
-    expect(mockRepository.saveCalled).toBe(true);
-    expect(mockUnitOfWork.committed).toBe(true);
-  });
-});
-```
-
-Run tests:
-
+### Port Already in Use
+If you get "port already in use" errors:
 ```bash
-cd /workspace/backend
-bun test
+# Find what's using the port (e.g., 3000)
+# Windows:
+netstat -ano | findstr :3000
+
+# Mac/Linux:
+lsof -i :3000
+
+# Kill the process or change the port in .env
 ```
 
----
+### Docker Issues
+```bash
+# Restart Docker Desktop
+# Or from command line:
+docker-compose -f docker-compose.dev.yml down
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+### Database Connection Failed
+1. Ensure Docker containers are running: `docker-compose -f docker-compose.dev.yml ps`
+2. Check PostgreSQL logs: `docker-compose -f docker-compose.dev.yml logs postgres`
+3. Verify .env settings match docker-compose configuration
+
+### Migration Errors
+```bash
+# Drop all tables and re-run migrations
+# WARNING: This deletes all data!
+docker-compose -f docker-compose.dev.yml down -v
+docker-compose -f docker-compose.dev.yml up -d
+npm run db:migrate
+npm run db:seed
+```
 
 ## Next Steps
 
-1. **Complete all domain entities** (Workspace, Service, Person, Approval, etc.)
-2. **Implement remaining use cases** (MakeApprovalDecision, TransitionRequest, etc.)
-3. **Add authentication middleware** (JWT validation, user context extraction)
-4. **Build authorization engine** (Policy evaluation, row-level security)
-5. **Create API routes** for all endpoints defined in DEVELOPMENT_PLAN.md
-6. **Set up background worker** for workflow processing
-7. **Connect frontend** to backend API instead of in-memory data
+1. **Explore API Documentation**: Visit http://localhost:3000/docs to see all available endpoints
+2. **Test Login**: Use the test credentials above to login
+3. **Create Requests**: Try creating service requests through the API or UI
+4. **Read Documentation**: Check `/workspace/STRATEGIC_BUILD_PLAN.md` for the full roadmap
 
----
+## Architecture Overview
 
-## Key Principles to Follow
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Frontend  │────▶│   Backend    │────▶│   PostgreSQL    │
+│  (React)    │     │   (Fastify)  │     │   (Database)    │
+│ :5173       │     │   :3000      │     │   :5432         │
+└─────────────┘     └──────────────┘     └─────────────────┘
+                           │
+                    ┌──────┴──────┐
+                    ▼             ▼
+            ┌───────────┐  ┌───────────┐
+            │   Redis   │  │   MinIO   │
+            │   :6379   │  │   :9000   │
+            └───────────┘  └───────────┘
+```
 
-✅ **DO**:
-- Keep domain layer free of external dependencies
-- Inject all dependencies through constructors
-- Use transactions for business operations
-- Log all state changes to audit trail
-- Validate input at API boundaries
-- Apply authorization in both API and repository layers
+## Need Help?
 
-❌ **DON'T**:
-- Import database clients directly in domain/application code
-- Create dependencies inside use cases
-- Skip transaction management for write operations
-- Trust client-side authorization alone
-- Store secrets in code (use environment variables)
-- Mix concerns between layers
-
----
-
-*This is a living document. Update it as you learn and adapt the implementation.*
+- Check the logs in your terminal
+- Review error messages carefully
+- Ensure all prerequisites are installed correctly
+- Verify Docker containers are running
+- Check that .env file exists and has correct values
