@@ -1,6 +1,6 @@
-﻿import { Kysely } from 'kysely';
+import { Kysely } from 'kysely';
 import { CamelCasePlugin } from 'kysely';
-import { PostgresDialect } from '../PostgresDatabase.js';
+import { PostgresDialect } from '../database/PostgresDatabase.js';
 import { Database } from '../database/types.js';
 import bcrypt from 'bcryptjs';
 
@@ -16,7 +16,7 @@ export async function seedDatabase() {
   });
 
   try {
-    console.log('ðŸŒ± Seeding database...');
+    console.log('🌱 Seeding database...');
 
     // Create default workspaces
     const workspaces = [
@@ -47,7 +47,7 @@ export async function seedDatabase() {
             active: true,
           })
           .execute();
-        console.log(`âœ… Created workspace: ${ws.name}`);
+        console.log(`✅ Created workspace: ${ws.name}`);
       }
     }
 
@@ -110,21 +110,20 @@ export async function seedDatabase() {
             active: true,
           })
           .execute();
-        console.log(`âœ… Created user: ${user.name} (${user.role})`);
+        console.log(`✅ Created user: ${user.name} (${user.role})`);
       }
     }
 
-    console.log('ðŸŽ‰ Database seeding completed!');
-    console.log('\nðŸ“‹ Test Credentials:');
+    console.log('🎉 Database seeding completed!');
+    console.log('\n📋 Test Credentials:');
     console.log('   Email: admin@unified-esm.local');
     console.log('   Password: Password123!');
     console.log('\n   All users use the same password for testing.');
     
   } catch (error) {
-    console.error('ðŸ’¥ Seeding error:', error);
+    console.error('💥 Seeding error:', error);
     throw error;
   } finally {
     await db.destroy();
   }
 }
-

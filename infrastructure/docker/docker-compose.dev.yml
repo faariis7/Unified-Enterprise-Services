@@ -38,7 +38,7 @@ services:
 
   # MinIO for file storage (S3-compatible)
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio
     container_name: unified-esm-minio
     restart: unless-stopped
     environment:
@@ -98,3 +98,4 @@ volumes:
 networks:
   default:
     name: unified-esm-network
+

@@ -5,7 +5,6 @@
     "lib": ["ES2022"],
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -37,3 +36,4 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
+
