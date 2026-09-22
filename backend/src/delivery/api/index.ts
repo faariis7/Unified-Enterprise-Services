@@ -66,8 +66,70 @@ const buildApp = async () => {
   const requestRepository = new RequestRepository(db);
   const createRequestUseCase = new CreateRequestUseCase(requestRepository);
 
-  // Health check endpoint
-  app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+  // Health check endpoint with service validation
+  app.get('/health', async (request, reply) => {
+    const healthStatus = {
+      status: 'ok' as const,
+      timestamp: new Date().toISOString(),
+      services: {
+        database: 'unknown' as 'connected' | 'disconnected' | 'unknown',
+        redis: 'unknown' as 'connected' | 'disconnected' | 'unknown',
+        storage: 'unknown' as 'connected' | 'disconnected' | 'unknown',
+      },
+    };
+
+    // Check database
+    try {
+      await db.query('SELECT 1');
+      healthStatus.services.database = 'connected';
+    } catch {
+      healthStatus.services.database = 'disconnected';
+      healthStatus.status = 'degraded';
+    }
+
+    // Check Redis
+    try {
+      const redis = require('ioredis');
+      const redisClient = new redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      });
+      await redisClient.ping();
+      await redisClient.quit();
+      healthStatus.services.redis = 'connected';
+    } catch {
+      healthStatus.services.redis = 'disconnected';
+      healthStatus.status = 'degraded';
+    }
+
+    // Check Storage (MinIO)
+    try {
+      const response = await fetch(`http://${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || '9000'}/minio/health/live`);
+      if (response.ok) {
+        healthStatus.services.storage = 'connected';
+      } else {
+        throw new Error('Storage not responding');
+      }
+    } catch {
+      healthStatus.services.storage = 'disconnected';
+      healthStatus.status = 'degraded';
+    }
+
+    return reply.send(healthStatus);
+  });
+
+  // Readiness probe - checks if app is ready to accept traffic
+  app.get('/health/ready', async (request, reply) => {
+    try {
+      await db.query('SELECT 1');
+      return reply.send({ status: 'ready', timestamp: new Date().toISOString() });
+    } catch {
+      return reply.code(503).send({ status: 'not_ready', reason: 'database_disconnected' });
+    }
+  });
+
+  // Liveness probe - checks if app is still alive
+  app.get('/health/live', async () => ({ status: 'alive', timestamp: new Date().toISOString() }));
 
   // Authentication routes (hardcoded for now)
   app.post('/api/v1/auth/login', async (request, reply) => {
