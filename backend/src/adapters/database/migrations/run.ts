@@ -230,7 +230,7 @@ export async function rollbackLastMigration() {
     console.log(`ðŸ”™ Rolling back migration: ${migration.name}`);
     
     await db.transaction().execute(async (transaction) => {
-      await migration.down(transaction);
+      await migration.down!(transaction);
       await transaction
         .deleteFrom('migrations')
         .where('name', '=', migration.name)

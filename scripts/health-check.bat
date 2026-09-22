@@ -121,9 +121,9 @@ if %ERRORS% equ 0 (
     echo.
     echo  Troubleshooting tips:
     echo    1. Ensure Docker Desktop is running
-    echo    2. Run: docker-compose -f docker-compose.dev.yml ps
+    echo    2. Run: docker compose -f docker-compose.dev.yml ps
     echo    3. Check logs: docker logs ^<container-name^>
-    echo    4. Restart containers: docker-compose restart
+    echo    4. Restart containers: docker compose restart
     echo  ============================================================================
     exit /b 1
 )

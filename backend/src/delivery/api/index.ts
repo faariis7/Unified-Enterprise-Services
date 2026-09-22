@@ -6,6 +6,7 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { sql } from 'kysely';
 import { pino } from 'pino';
 import { PostgresDatabase } from '../../adapters/database/PostgresDatabase.js';
 import { PostgresRequestRepository as RequestRepository } from '../../adapters/repositories/PostgresRequestRepository.js';
@@ -130,7 +131,7 @@ const buildApp = async () => {
   // Readiness probe - checks if app is ready to accept traffic
   app.get('/health/ready', async (_request, reply) => {
     try {
-      await db.query('SELECT 1');
+      await db.selectNoFrom(sql`1`.as('one')).execute();
       return reply.send({ status: 'ready', timestamp: new Date().toISOString() });
     } catch {
       return reply.code(503).send({ status: 'not_ready', reason: 'database_disconnected' });

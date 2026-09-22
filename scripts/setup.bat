@@ -32,7 +32,7 @@ echo.
 echo [2/8] Starting Docker containers...
 cd /d "%~dp0..\infrastructure\docker"
 
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 if %errorlevel% neq 0 (
     echo ERROR: Failed to start Docker containers
     exit /b 1
@@ -44,10 +44,10 @@ timeout /t 10 /nobreak >nul
 REM Verify container health
 echo.
 echo [3/8] Verifying container health...
-docker-compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml ps
 if %errorlevel% neq 0 (
     echo WARNING: Some containers may not be healthy
-    echo Check 'docker-compose ps' output above
+    echo Check 'docker compose ps' output above
 )
 
 REM Navigate to backend directory
@@ -56,7 +56,7 @@ echo [4/8] Installing backend dependencies...
 cd /d "%~dp0..\backend"
 
 if not exist "node_modules\" (
-    echo Installing backend dependencies (this may take a few minutes)...
+    echo Installing backend dependencies . This may take a few minutes...
     call npm install
     if %errorlevel% neq 0 (
         echo ERROR: Failed to install backend dependencies
@@ -101,7 +101,7 @@ echo [8/8] Installing frontend dependencies...
 cd /d "%~dp0.."
 
 if not exist "node_modules\" (
-    echo Installing frontend dependencies (this may take a few minutes)...
+    echo Installing frontend dependencies . This may take a few minutes...
     call npm install
     if %errorlevel% neq 0 (
         echo ERROR: Failed to install frontend dependencies

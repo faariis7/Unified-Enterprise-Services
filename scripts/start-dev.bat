@@ -20,7 +20,7 @@ docker ps | findstr "unified-esm-postgres" >nul 2>&1
 if %errorlevel% neq 0 (
     echo WARNING: Docker containers not running. Starting infrastructure...
     cd /d "%~dp0..\infrastructure\docker"
-    docker-compose -f docker-compose.dev.yml up -d
+    docker compose -f docker-compose.dev.yml up -d
     echo Waiting for containers to start...
     timeout /t 10 /nobreak >nul
     cd /d "%~dp0.."
